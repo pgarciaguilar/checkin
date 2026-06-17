@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const establiments = [
-  { nom: "Els Esclopets", href: "/esclopets", descripcio: "Casa rural · Alt Penedès" },
+  { nom: "Els Esclopets", href: "/esclopets", descripcio: "Casa rural · Segarra · Lleida" },
 ];
 
 export default function Home() {

@@ -713,7 +713,7 @@ export default function EsclopetsPage() {
         </button>
         <button
           style={btnSecondary}
-          onClick={() => window.open('https://registreviatgers.mossos.gencat.cat/ca/login', '_blank', 'noopener,noreferrer')}
+          onClick={() => window.open('https://registreviatgers.mossos.gencat.cat/mossos_hotels/AppJava/login.do', '_blank', 'noopener,noreferrer')}
         >
           ⎘ Obrir portal dels Mossos d&apos;Esquadra
         </button>
