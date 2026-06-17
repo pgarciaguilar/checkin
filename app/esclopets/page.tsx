@@ -150,14 +150,30 @@ function esMajorEdat(dataNaixement: string): boolean {
   return edat >= 18;
 }
 
+const DNI_LLETRES = 'TRWAGMYFPDXBNJZSQVHLCKE';
+
 function validarDocument(tipus: TipusDoc, num: string): string | null {
   const n = num.trim().toUpperCase();
-  if (tipus === 'DNI' && !/^\d{8}[A-Z]$/.test(n))
-    return 'Format incorrecte (ex: 12345678A)';
-  if (tipus === 'NIE' && !/^[XYZ]\d{7}[A-Z]$/.test(n))
-    return 'Format incorrecte (ex: X1234567A)';
+  if (tipus === 'DNI') {
+    if (!/^\d{8}[A-Z]$/.test(n)) return 'Format incorrecte (ex: 12345678A)';
+    const esperada = DNI_LLETRES[parseInt(n.slice(0, 8), 10) % 23];
+    if (n[8] !== esperada) return 'La lletra del DNI no és correcta';
+  }
+  if (tipus === 'NIE') {
+    if (!/^[XYZ]\d{7}[A-Z]$/.test(n)) return 'Format incorrecte (ex: X1234567A)';
+    const prefix: Record<string, string> = { X: '0', Y: '1', Z: '2' };
+    const numEq = prefix[n[0]] + n.slice(1, 8);
+    const esperada = DNI_LLETRES[parseInt(numEq, 10) % 23];
+    if (n[8] !== esperada) return 'La lletra del NIE no és correcta';
+  }
   if (tipus === 'Passaport' && !/^[A-Z0-9]{6,}$/i.test(n))
     return 'Mínim 6 caràcters alfanumèrics';
+  return null;
+}
+
+function validarNacionalitat(nat: string): string | null {
+  if (!/^[a-zA-ZàáâãäåæçèéêëìíîïðñòóôõöùúûüýÿÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝ\s'-]+$/.test(nat.trim()))
+    return 'La nacionalitat no pot contenir números';
   return null;
 }
 
@@ -213,8 +229,17 @@ export default function EsclopetsPage() {
   function crearReserva() {
     const errs: Record<string, string> = {};
     if (!formInici.codi.trim()) errs.codi = 'Camp obligatori';
-    if (!formInici.dataEntrada) errs.dataEntrada = 'Camp obligatori';
-    if (!formInici.dataSortida) errs.dataSortida = 'Camp obligatori';
+    const avui = new Date(); avui.setHours(0, 0, 0, 0);
+    if (!formInici.dataEntrada) {
+      errs.dataEntrada = 'Camp obligatori';
+    } else if (new Date(formInici.dataEntrada) <= avui) {
+      errs.dataEntrada = "La data d'entrada ha de ser posterior a avui";
+    }
+    if (!formInici.dataSortida) {
+      errs.dataSortida = 'Camp obligatori';
+    } else if (formInici.dataEntrada && new Date(formInici.dataSortida) <= new Date(formInici.dataEntrada)) {
+      errs.dataSortida = "La data de sortida ha de ser posterior a la d'entrada";
+    }
     if (formInici.adults < 1) errs.adults = 'Mínim 1 adult';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
@@ -230,6 +255,8 @@ export default function EsclopetsPage() {
     if (!formHoste.nomCognoms.trim()) errs.nomCognoms = 'Camp obligatori';
     if (!formHoste.dataNaixement) {
       errs.dataNaixement = 'Camp obligatori';
+    } else if (formHoste.esMenor && new Date(formHoste.dataNaixement) > new Date()) {
+      errs.dataNaixement = 'La data de naixement no pot ser futura';
     } else if (!formHoste.esMenor && !esMajorEdat(formHoste.dataNaixement)) {
       errs.dataNaixement = "L'adult ha de ser major de 18 anys";
     }
@@ -240,7 +267,12 @@ export default function EsclopetsPage() {
         const docErr = validarDocument(formHoste.tipusDocument, formHoste.numDocument);
         if (docErr) errs.numDocument = docErr;
       }
-      if (!formHoste.nacionalitat.trim()) errs.nacionalitat = 'Camp obligatori';
+      if (!formHoste.nacionalitat.trim()) {
+        errs.nacionalitat = 'Camp obligatori';
+      } else {
+        const natErr = validarNacionalitat(formHoste.nacionalitat);
+        if (natErr) errs.nacionalitat = natErr;
+      }
       if (!formHoste.telefon.trim()) {
         errs.telefon = 'Camp obligatori';
       } else {
@@ -681,7 +713,7 @@ export default function EsclopetsPage() {
         </button>
         <button
           style={btnSecondary}
-          onClick={() => window.open('https://registreviatgers.mossos.gencat.cat', '_blank', 'noopener,noreferrer')}
+          onClick={() => window.open('https://registreviatgers.mossos.gencat.cat/ca/login', '_blank', 'noopener,noreferrer')}
         >
           ⎘ Obrir portal dels Mossos d&apos;Esquadra
         </button>
