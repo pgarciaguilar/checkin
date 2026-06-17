@@ -139,6 +139,40 @@ function descarregarFitxer(reserva: Reserva) {
   URL.revokeObjectURL(url);
 }
 
+// ─── Validators ──────────────────────────────────────────────────────────────
+
+function esMajorEdat(dataNaixement: string): boolean {
+  const neix = new Date(dataNaixement);
+  const avui = new Date();
+  let edat = avui.getFullYear() - neix.getFullYear();
+  const m = avui.getMonth() - neix.getMonth();
+  if (m < 0 || (m === 0 && avui.getDate() < neix.getDate())) edat--;
+  return edat >= 18;
+}
+
+function validarDocument(tipus: TipusDoc, num: string): string | null {
+  const n = num.trim().toUpperCase();
+  if (tipus === 'DNI' && !/^\d{8}[A-Z]$/.test(n))
+    return 'Format incorrecte (ex: 12345678A)';
+  if (tipus === 'NIE' && !/^[XYZ]\d{7}[A-Z]$/.test(n))
+    return 'Format incorrecte (ex: X1234567A)';
+  if (tipus === 'Passaport' && !/^[A-Z0-9]{6,}$/i.test(n))
+    return 'Mínim 6 caràcters alfanumèrics';
+  return null;
+}
+
+function validarTelefon(tel: string): string | null {
+  if (!/^\+?[\d\s\-()+]{1,}$/.test(tel.trim())) return 'Format no vàlid';
+  if (tel.replace(/\D/g, '').length < 9) return 'Mínim 9 dígits';
+  return null;
+}
+
+function validarEmail(email: string): string | null {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))
+    return 'Format de correu no vàlid';
+  return null;
+}
+
 function ProgressBar({ value, total }: { value: number; total: number }) {
   const pct = total > 0 ? (value / total) * 100 : 0;
   return (
@@ -194,12 +228,31 @@ export default function EsclopetsPage() {
   function guardarHoste() {
     const errs: Record<string, string> = {};
     if (!formHoste.nomCognoms.trim()) errs.nomCognoms = 'Camp obligatori';
-    if (!formHoste.dataNaixement) errs.dataNaixement = 'Camp obligatori';
+    if (!formHoste.dataNaixement) {
+      errs.dataNaixement = 'Camp obligatori';
+    } else if (!formHoste.esMenor && !esMajorEdat(formHoste.dataNaixement)) {
+      errs.dataNaixement = "L'adult ha de ser major de 18 anys";
+    }
     if (!formHoste.esMenor) {
-      if (!formHoste.numDocument.trim()) errs.numDocument = 'Camp obligatori';
+      if (!formHoste.numDocument.trim()) {
+        errs.numDocument = 'Camp obligatori';
+      } else {
+        const docErr = validarDocument(formHoste.tipusDocument, formHoste.numDocument);
+        if (docErr) errs.numDocument = docErr;
+      }
       if (!formHoste.nacionalitat.trim()) errs.nacionalitat = 'Camp obligatori';
-      if (!formHoste.telefon.trim()) errs.telefon = 'Camp obligatori';
-      if (!formHoste.email.trim()) errs.email = 'Camp obligatori';
+      if (!formHoste.telefon.trim()) {
+        errs.telefon = 'Camp obligatori';
+      } else {
+        const telErr = validarTelefon(formHoste.telefon);
+        if (telErr) errs.telefon = telErr;
+      }
+      if (!formHoste.email.trim()) {
+        errs.email = 'Camp obligatori';
+      } else {
+        const emailErr = validarEmail(formHoste.email);
+        if (emailErr) errs.email = emailErr;
+      }
     }
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
@@ -241,6 +294,7 @@ export default function EsclopetsPage() {
     backgroundColor: C.bg,
     color: C.text,
     minHeight: '100vh',
+    width: '100%',
     padding: '20px',
     maxWidth: '480px',
     margin: '0 auto',
